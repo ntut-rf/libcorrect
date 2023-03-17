@@ -34,23 +34,33 @@ endif(MSVC)
 find_library(FEC fec)
 CHECK_LIBRARY_EXISTS(FEC dotprod "" HAVE_LIBFEC)
 
+# Check if host machine can compile with SSE 4.1 intrinsic
+cmake_push_check_state(RESET)
 if(NOT CMAKE_CROSSCOMPILING)
-  # Check if host machine can compile with SSE 4.1 intrinsic
-  cmake_push_check_state(RESET)
   set(CMAKE_REQUIRED_DEFINITIONS -march=native)
-  check_c_source_compiles("
-    #include <x86intrin.h>
-    int main() {
-      __m128i a;
-      __m128i b;
-      __m128i c = _mm_min_epu16(a, b);
-      return 0;
-    }" HAVE_SSE)
-  cmake_pop_check_state()
+else()
+  set(CMAKE_REQUIRED_DEFINITIONS -mfpu=neon)
 endif()
+check_c_source_compiles("
+  #ifdef __ARM_NEON
+  #include <sse2neon.h>
+  #else
+  #include <x86intrin.h>
+  #endif
+  int main() {
+    __m128i a;
+    __m128i b;
+    __m128i c = _mm_min_epu16(a, b);
+    return 0;
+  }" HAVE_SSE)
+cmake_pop_check_state()
 
 if(HAVE_SSE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+  if(NOT CMAKE_CROSSCOMPILING)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+  else()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfpu=neon")
+  endif()
 endif()
 
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)

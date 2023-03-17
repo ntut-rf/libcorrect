@@ -2,7 +2,11 @@
 #ifdef _MSC_VER
 #include <intrin.h>
 #else
+#ifdef __ARM_NEON
+#include <sse2neon.h>
+#else
 #include <x86intrin.h>
+#endif
 #endif
 
 typedef unsigned int distance_quad_key_t;
